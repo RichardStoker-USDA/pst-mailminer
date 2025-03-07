@@ -1,0 +1,6 @@
+flask==2.3.3
+werkzeug==2.3.7
+openai==1.55.3
+html2text==2020.1.16
+gunicorn==21.2.0
+tiktoken==0.7.0

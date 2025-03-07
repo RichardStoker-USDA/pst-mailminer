@@ -1,0 +1,33 @@
+# Virtual Environment
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Application data
+uploads/*
+!uploads/.gitkeep
+results/*
+!results/.gitkeep
+
+# Environment variables and secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.secret*
+.apikey*
+*.env
+
+# IDE files
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Claude local files
+CLAUDE.md

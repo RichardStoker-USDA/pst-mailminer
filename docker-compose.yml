@@ -1,0 +1,29 @@
+services:
+  pst-mailminer:
+    # Use either build to build locally or image to pull from GHCR
+    
+    # Option 1: Build locally
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    
+    # Option 2: Pull from GitHub Container Registry (Comment Option 1 to use this)
+    # image: ghcr.io/richardstoker-usda/pst-mailminer:latest
+    
+    container_name: pst-mailminer
+    ports:
+      - "5050:5050"
+    volumes:
+      - pst_uploads:/app/uploads
+      - pst_results:/app/results
+    environment:
+      - PORT=5050
+      - DOCKER_CONTAINER=true
+      - PRELOADED_API_KEY=${PRELOADED_API_KEY}
+      - ALLOWED_MODELS_WITH_PRELOADED_KEY=${ALLOWED_MODELS_WITH_PRELOADED_KEY}
+    restart: unless-stopped
+    user: "1000:1000"  # Restored user constraint for correct permissions
+
+volumes:
+  pst_uploads:
+  pst_results:
