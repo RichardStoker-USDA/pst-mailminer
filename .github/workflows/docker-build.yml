@@ -36,7 +36,10 @@ jobs:
       # Login to GitHub Container Registry
       - name: Login to GitHub Container Registry
         run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          # Use a Personal Access Token instead of GITHUB_TOKEN
+          # You need to create this PAT with write:packages permission
+          # and add it as a repository secret named CR_PAT
+          echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           
       # Build and push the Docker image
       - name: Build and push Docker image
