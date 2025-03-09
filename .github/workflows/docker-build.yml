@@ -12,42 +12,26 @@ jobs:
       packages: write
       
     steps:
-      # Use GitHub's own checkout action which is always allowed
       - name: Checkout code
         run: |
           git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git .
           git checkout ${{ github.sha }}
           
-      # Setup Docker Buildx manually
       - name: Set up Docker Buildx
         run: |
-          # Enable experimental features in Docker
           echo '{"experimental": true}' | sudo tee /etc/docker/daemon.json
           sudo systemctl restart docker || true
-          
-          # Install qemu for multi-platform builds
-          sudo apt-get update
-          sudo apt-get install -y qemu-user-static
-          
-          # Setup buildx
+          sudo apt-get update && sudo apt-get install -y qemu-user-static
           docker buildx create --name mybuilder --use
           docker buildx inspect --bootstrap
           
-      # Login to GitHub Container Registry
       - name: Login to GitHub Container Registry
         run: |
-          # Use a Personal Access Token instead of GITHUB_TOKEN
-          # You need to create this PAT with write:packages permission
-          # and add it as a repository secret named CR_PAT
           echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           
-      # Build and push the Docker image
       - name: Build and push Docker image
         run: |
-          # Lower case the repo name (GitHub packages require lowercase)
           IMAGE_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          
-          # Build multi-architecture image
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --tag "ghcr.io/$IMAGE_NAME:latest" \
