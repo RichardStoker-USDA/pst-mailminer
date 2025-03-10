@@ -196,7 +196,7 @@ Create specialized templates for your specific needs with the template creation 
 
 ## Credits
 
-Developed by Richard Stoker on EnRichedLab - my personal lab of AI empowered apps and solutions.
+Developed by Richard Stoker on EnRichedLab - a testing lab for AI empowered apps and solutions.
 
 ## License
 
