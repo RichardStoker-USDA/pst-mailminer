@@ -1,4 +1,4 @@
-# PST MailMiner (AI-enRiched)
+# PST MailMiner
 
 A Docker & AI powered email analysis tool that transforms PST archives into actionable insights for legal discovery, project tracking, and customer feedback analysis using large language models (LLM). Create custom analyses via a simple wizard interface or by importing your own templates.
 
