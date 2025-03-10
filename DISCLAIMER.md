@@ -8,7 +8,7 @@ PST-MailMiner is designed for legitimate research and analytical purposes only. 
 
 3. **API Usage**: PST-MailMiner utilizes OpenAI's API services for analysis. All data processed may be transmitted to OpenAI's servers subject to their privacy policy and terms of service. Users should review OpenAI's data handling policies before processing sensitive information.
 
-4. **OpenAI Data Controls Recommendation**: If using your own OpenAI API key with PST-MailMiner, I strongly recommend disabling all data sharing options in your OpenAI API console data controls. Note: The shared community API key provided already has all data sharing disabled.
+4. **OpenAI Data Controls Recommendation**: If using your own OpenAI API key with PST-MailMiner, I strongly recommend disabling all data sharing options in your OpenAI API console data controls.
 
 5. **User Responsibility**: The user assumes full responsibility for ensuring all data processed is obtained legally and with proper authorization. PST-MailMiner and its creator accept no liability for misuse of this tool or for any violations of privacy laws, data protection regulations, or intellectual property rights.
 
