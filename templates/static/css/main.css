@@ -676,6 +676,107 @@ h1, h2, h3, h4, h5, h6 {
     100% { opacity: 0.6; transform: scale(1.06); }
 }
 
+/* Stage progress indicators */
+.processing-stages {
+    margin: 1.5rem 0;
+    overflow-x: auto; /* Allow horizontal scrolling on small screens */
+    padding-bottom: 5px; /* Add padding for scrollbar */
+}
+
+.stage-marker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    width: 70px;
+    opacity: 0.6;
+    transition: all 0.3s ease;
+    z-index: 2;
+}
+
+.stage-marker.active {
+    opacity: 1;
+}
+
+.stage-marker.complete {
+    opacity: 1;
+    color: #28a745;
+}
+
+.stage-icon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #f8f9fa;
+    border: 2px solid #dee2e6;
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+}
+
+.stage-marker.active .stage-icon {
+    background-color: #e6f7ff;
+    border-color: #007bff;
+    color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.stage-marker.active .stage-icon i {
+    animation: pulse-icon 1.5s infinite;
+}
+
+@keyframes pulse-icon {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+}
+
+.stage-marker.complete .stage-icon {
+    background-color: #e6fff0;
+    border-color: #28a745;
+    color: #28a745;
+}
+
+.stage-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.stage-progress-bar {
+    height: 4px;
+    background-color: #e9ecef;
+    border-radius: 2px;
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+.stage-progress {
+    height: 100%;
+    background: linear-gradient(90deg, #3a1de0, #00d4ff);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stage-progress::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: linear-gradient(90deg, 
+        rgba(255, 255, 255, 0) 0%, 
+        rgba(255, 255, 255, 0.4) 50%, 
+        rgba(255, 255, 255, 0) 100%);
+    animation: progress-shimmer 2s infinite;
+}
+
 /* Utils */
 .hidden {
     display: none;
@@ -825,13 +926,23 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Community key button styling */
-#useTrialApiKeyBtn {
+.community-key-btn {
     padding: 0.6rem 1.2rem;
     font-weight: 500;
     border-radius: 0.25rem;
     transition: all 0.3s ease;
-    min-width: 200px;
+    min-width: 140px; /* Reduced min-width */
+    max-width: 100%;
     font-size: 0.95rem;
+    white-space: normal; /* Allow text to wrap */
+    word-wrap: break-word;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: auto;
+    min-height: 50px;
 }
 
 #useTrialApiKeyBtn.btn-primary {
