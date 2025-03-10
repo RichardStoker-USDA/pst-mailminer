@@ -34,10 +34,10 @@ EXPOSE 5050
 # Define environment variables
 ENV FLASK_APP=app.py
 ENV DOCKER_CONTAINER=true
-# Trial API key with $5 limit for gpt-4o-mini only
+# Preloaded API key for convenience
 ARG PRELOADED_API_KEY
 ENV PRELOADED_API_KEY=$PRELOADED_API_KEY
-ARG ALLOWED_MODELS_WITH_PRELOADED_KEY="gpt-4o-mini"
+ARG ALLOWED_MODELS_WITH_PRELOADED_KEY="gpt-4o,gpt-4o-mini"
 ENV ALLOWED_MODELS_WITH_PRELOADED_KEY=$ALLOWED_MODELS_WITH_PRELOADED_KEY
 
 # Run the application

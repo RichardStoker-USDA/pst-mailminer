@@ -47,18 +47,18 @@
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-key-fill"></i></span>
                             <input type="password" class="form-control" id="api_key" name="api_key" required>
-                            <button type="button" class="btn btn-outline-primary btn-lg" id="useTrialApiKeyBtn" data-bs-toggle="tooltip" title="Access the Community Monthly Limited key ($5/month shared quota)">
-                                <i class="bi bi-people"></i> Use Community Key
+                            <button type="button" class="btn btn-outline-primary btn-lg preloaded-key-btn" id="useTrialApiKeyBtn" data-bs-toggle="tooltip" title="Access the preloaded API key">
+                                <i class="bi bi-people"></i> {{ community_button_text }}
                             </button>
                         </div>
                         <div id="apiKeyFeedback" class="form-text">Your API key will be used for analyzing the emails. It's never stored on the server.</div>
                         <div id="trialKeyNotice" class="alert alert-success mt-2 d-none">
                             <i class="bi bi-people-fill me-2"></i>
                             <span id="trialKeyMessage">
-                                <strong>Using Community Monthly Limited Key.</strong> <span class="text-dark small">Model limited to GPT-4o-mini for cost efficiency. All OpenAI data sharing controls are disabled for privacy.</span>
+                                <strong>{{ community_message_title }}</strong> <span class="text-dark small">{{ community_message_details }}</span>
                             </span>
                             <div id="trialKeyMissingMessage" class="d-none">
-                                <strong>Community Monthly Limited Key not available.</strong> Please use your own OpenAI API key.
+                                <strong>Preloaded API key not available.</strong> Please use your own OpenAI API key.
                             </div>
                         </div>
                     </div>
@@ -369,13 +369,38 @@
                 </div>
                 
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <div class="processing-status">
+                    <div class="processing-status d-flex align-items-center">
                         <span class="ai-processing-indicator"></span>
-                        <span class="small processing-text">Processing your data...</span>
+                        <span class="small processing-text me-2">Processing your data...</span>
+                        <!-- Phase indicators will be dynamically added here -->
                     </div>
                     <button type="button" class="btn btn-outline-danger btn-sm" id="cancelAnalysisBtn">
                         <i class="bi bi-x-circle me-1"></i>Cancel Analysis
                     </button>
+                </div>
+                
+                <div class="processing-stages mb-2">
+                    <div class="d-flex justify-content-between">
+                        <div class="stage-marker active" data-stage="upload">
+                            <span class="stage-icon"><i class="bi bi-cloud-upload"></i></span>
+                            <span class="stage-label">Upload</span>
+                        </div>
+                        <div class="stage-marker" data-stage="extraction">
+                            <span class="stage-icon"><i class="bi bi-box"></i></span>
+                            <span class="stage-label">Extraction</span>
+                        </div>
+                        <div class="stage-marker" data-stage="analysis">
+                            <span class="stage-icon"><i class="bi bi-cpu"></i></span>
+                            <span class="stage-label">Analysis</span>
+                        </div>
+                        <div class="stage-marker" data-stage="complete">
+                            <span class="stage-icon"><i class="bi bi-check-circle"></i></span>
+                            <span class="stage-label">Complete</span>
+                        </div>
+                    </div>
+                    <div class="stage-progress-bar">
+                        <div class="stage-progress" style="width: 0%"></div>
+                    </div>
                 </div>
                 
                 <div class="progress-container mb-3">

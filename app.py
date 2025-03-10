@@ -10,6 +10,7 @@ import time
 import uuid
 import secrets
 from werkzeug.utils import secure_filename
+import werkzeug.exceptions
 import html2text
 import re
 import mimetypes
@@ -87,15 +88,21 @@ def cleanup_old_sessions():
     for session_id in to_remove:
         del processing_statuses[session_id]
 
-# Community Monthly Limited Key configuration
+# Preloaded API Key configuration
 # Always use environment variables for API keys - never hard-code in source
 # This should be provided at docker build/run time and not stored in the repository
-TRIAL_API_KEY = os.environ.get('PRELOADED_API_KEY', '')
+PRELOADED_API_KEY = os.environ.get('PRELOADED_API_KEY', '')
 
-# Check if there are model restrictions for the community key
+# Check if there are model restrictions for the preloaded key
 # ALLOWED_MODELS_WITH_PRELOADED_KEY can be "gpt-4o", "gpt-4o-mini", or comma-separated list
-# If empty or not set, all models are allowed with the community key
-ALLOWED_MODELS_WITH_PRELOADED_KEY = os.environ.get('ALLOWED_MODELS_WITH_PRELOADED_KEY', '')
+# If empty or not set, all models are allowed with the preloaded key
+ALLOWED_MODELS_WITH_PRELOADED_KEY = os.environ.get('ALLOWED_MODELS_WITH_PRELOADED_KEY', 'gpt-4o,gpt-4o-mini')
+
+# Customizable button and message text for the Preloaded API Key feature
+# Setting these is optional - default values will be used if not set
+COMMUNITY_BUTTON_TEXT = os.environ.get('COMMUNITY_BUTTON_TEXT', 'Use Preloaded API Key')
+COMMUNITY_MESSAGE_TITLE = os.environ.get('COMMUNITY_MESSAGE_TITLE', 'Using Preloaded API Key')
+COMMUNITY_MESSAGE_DETAILS = os.environ.get('COMMUNITY_MESSAGE_DETAILS', 'All OpenAI data sharing controls are disabled for privacy.')
 
 # Ensure directories exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -661,32 +668,60 @@ class PSTExtractor:
         
         return self.clean_text(body)
 
-    def extract_pst(self):
+    def extract_pst(self, check_cancellation_func=None):
         """Extract PST to mbox format using readpst"""
         os.makedirs(self.temp_dir, exist_ok=True)
         
         # Check if we're running in Docker
         in_docker = os.path.exists("/.dockerenv") or os.environ.get("DOCKER_CONTAINER", False)
+        logger.info(f"Extract PST - Running in Docker environment: {in_docker}")
+        logger.info(f"PST path exists: {os.path.exists(self.pst_path)}, Size: {os.path.getsize(self.pst_path) if os.path.exists(self.pst_path) else 'N/A'}")
+        logger.info(f"Output directory exists: {os.path.exists(self.temp_dir)}")
+        
+        # Check for cancellation before starting extraction
+        if check_cancellation_func and check_cancellation_func():
+            logger.info("PST extraction cancelled before starting")
+            return False
         
         try:
+            # Start the extraction process
             if in_docker:
                 # In Docker environment, use readpst directly
+                logger.info(f"Running readpst in Docker with command: /usr/bin/readpst -o {self.temp_dir} -e {self.pst_path}")
                 result = subprocess.run(['/usr/bin/readpst', '-o', self.temp_dir, '-e', self.pst_path], 
                                       check=False, capture_output=True)
             else:
                 # Use the wrapper script instead of calling readpst directly
                 script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'readpst_wrapper.py')
+                logger.info(f"Running readpst via wrapper script: {script_path} -o {self.temp_dir} -e {self.pst_path}")
                 
                 # Run the wrapper script
                 result = subprocess.run([sys.executable, script_path, '-o', self.temp_dir, '-e', self.pst_path], 
                                        check=False, capture_output=True)
             
+            # Get the result
+            stdout = result.stdout.decode('utf-8', errors='ignore')
+            stderr = result.stderr.decode('utf-8', errors='ignore')
+            
+            # Log the output
+            if stdout:
+                logger.info(f"Readpst output: {stdout}")
+            if stderr:
+                logger.warning(f"Readpst error: {stderr}")
+            
+            # Check if any files were extracted
+            extracted_files = list(Path(self.temp_dir).rglob('*.eml'))
+            logger.info(f"Number of extracted EML files: {len(extracted_files)}")
+            
             # Check the result
             if result.returncode == 0:
-                return True
+                if len(extracted_files) > 0:
+                    logger.info(f"PST extraction successful - {len(extracted_files)} emails extracted")
+                    return True
+                else:
+                    logger.error("PST extraction completed with success code but no emails were extracted")
+                    return False
             else:
-                stderr = result.stderr.decode('utf-8', errors='ignore')
-                stdout = result.stdout.decode('utf-8', errors='ignore')
                 logger.error(f"PST extraction failed with return code {result.returncode}")
                 logger.error(f"Standard error: {stderr}")
                 logger.error(f"Standard output: {stdout}")
@@ -742,22 +777,42 @@ class PSTExtractor:
             print(f"Error processing file {eml_path}: {str(e)}")
             return None
 
-    def process(self, status_callback=None):
+    def process(self, status_callback=None, check_cancellation_func=None):
         """Main processing method with status updates"""
         try:
             # Create output directories
             os.makedirs(self.output_dir, exist_ok=True)
             os.makedirs(self.attachments_dir, exist_ok=True)
 
+            # Check for cancellation before starting
+            if check_cancellation_func and check_cancellation_func():
+                logger.info("Processing cancelled before extraction")
+                if status_callback:
+                    status_callback("Processing cancelled by user", 0, error="Processing cancelled by user")
+                return None
+
             if status_callback:
                 status_callback("Extracting PST file...", 5)
 
-            # Extract PST to mbox
-            extraction_result = self.extract_pst()
+            # Extract PST to mbox with cancellation function
+            extraction_result = self.extract_pst(check_cancellation_func)
             
             if not extraction_result:
+                # Check if this was due to cancellation
+                if check_cancellation_func and check_cancellation_func():
+                    if status_callback:
+                        status_callback("PST extraction cancelled by user", 0, error="Processing cancelled by user")
+                    return None
+                else:
+                    if status_callback:
+                        status_callback("Failed to extract PST file", 0, error="The PST file could not be extracted. It may be corrupted or in an unsupported format. Check the logs for more details.")
+                    return None
+
+            # Check for cancellation after extraction
+            if check_cancellation_func and check_cancellation_func():
+                logger.info("Processing cancelled after extraction")
                 if status_callback:
-                    status_callback("Failed to extract PST file", 0, error=True)
+                    status_callback("Processing cancelled by user", 0, error="Processing cancelled by user")
                 return None
 
             if status_callback:
@@ -768,6 +823,14 @@ class PSTExtractor:
             total_files = len(eml_files)
             
             for i, eml_file in enumerate(eml_files):
+                # Check for cancellation regularly during processing
+                if check_cancellation_func and i % 10 == 0 and check_cancellation_func():
+                    logger.info(f"Processing cancelled during EML processing (processed {i}/{total_files})")
+                    if status_callback:
+                        status_callback(f"Processing cancelled by user ({i}/{total_files} emails processed)", 
+                                      0, error="Processing cancelled by user")
+                    return None
+
                 msg = self.process_eml_file(str(eml_file))
                 if msg:
                     all_messages.append(msg)
@@ -775,6 +838,13 @@ class PSTExtractor:
                 if status_callback and i % 10 == 0:
                     progress = 10 + int(30 * (i / total_files))
                     status_callback(f"Processed {i+1} emails...", progress)
+
+            # Final cancellation check before saving JSON
+            if check_cancellation_func and check_cancellation_func():
+                logger.info("Processing cancelled before saving JSON")
+                if status_callback:
+                    status_callback("Processing cancelled by user", 0, error="Processing cancelled by user")
+                return None
 
             # Save to JSON
             output_file = os.path.join(self.output_dir, 'extracted_emails.json')
@@ -1705,9 +1775,10 @@ def process_pst_file(pst_path, output_dir, api_key, model="gpt-4o", template_key
             
         # Then refresh the status to catch changes
         current_status = get_processing_status(session_id)
-        if current_status.get('status') == 'cancelled':
+        if current_status.get('status') in ['cancelled', 'cancelling']:
             # Set our local flag to ensure all threads know we're cancelled
             cancel_event.set()
+            logger.info(f"Cancellation detected for session {session_id} - status: {current_status.get('status')}")
             return True
             
         return False
@@ -1789,7 +1860,7 @@ def process_pst_file(pst_path, output_dir, api_key, model="gpt-4o", template_key
         
         # Extract emails from PST
         extractor = PSTExtractor(pst_path, output_dir)
-        json_file = extractor.process(update_status)
+        json_file = extractor.process(update_status, check_cancellation)
         
         if not json_file:
             error_msg = "PST extraction failed. No emails were extracted."
@@ -1835,9 +1906,14 @@ def process_pst_file(pst_path, output_dir, api_key, model="gpt-4o", template_key
 @app.route('/')
 def index():
     """Render the homepage with the file upload form"""
-    # Pass along whether a trial key is available to the template
-    has_trial_key = bool(TRIAL_API_KEY)
-    return render_template('index.html', templates=ANALYSIS_TEMPLATES, has_trial_key=has_trial_key)
+    # Pass along whether a preloaded key is available and custom text to the template
+    has_trial_key = bool(PRELOADED_API_KEY)
+    return render_template('index.html', 
+                          templates=ANALYSIS_TEMPLATES, 
+                          has_trial_key=has_trial_key,
+                          community_button_text=COMMUNITY_BUTTON_TEXT,
+                          community_message_title=COMMUNITY_MESSAGE_TITLE,
+                          community_message_details=COMMUNITY_MESSAGE_DETAILS)
 
 @app.route('/download-template')
 def download_template():
@@ -1955,20 +2031,38 @@ def cancel_analysis():
     # Get processing status for this session
     processing_status = get_processing_status(session_id)
     
-    if processing_status['status'] == 'processing':
-        # Set status to cancelled
+    # Perform cancellation even if not in "processing" state to handle edge cases
+    # This ensures even "starting" jobs get cancelled properly
+    if processing_status['status'] in ['processing', 'starting']:
+        # First set status to cancelling - intermediate state while operations are stopping
+        processing_status['status'] = 'cancelling'
+        processing_status['message'] = 'Cancelling analysis...'
+        processing_status['last_activity'] = time.time()
+        
+        # Log the cancellation with session details for troubleshooting
+        logger.info(f"Analysis cancellation initiated - session {session_id}")
+        logger.info(f"Current job: {processing_status.get('current_job', 'None')}")
+        
+        # Small delay to allow in-flight operations to check the cancellation flag
+        time.sleep(1)
+        
+        # Now set to fully cancelled state
         processing_status['status'] = 'cancelled'
         processing_status['message'] = 'Analysis cancelled by user'
         processing_status['error'] = 'Analysis cancelled by user'
         processing_status['last_activity'] = time.time()
-        logger.info(f"Analysis cancelled by user - session {session_id}")
         
         # The actual stopping of the process will be handled by the polling mechanism
-        # After 5 seconds, reset the status to idle to allow new analysis
+        # After 10 seconds, reset the status to idle to allow new analysis
+        # Increased from 5 to 10 seconds to ensure API calls have time to complete
         def reset_status_after_delay():
-            time.sleep(5)
+            # First wait to make sure all processes have had time to terminate
+            time.sleep(10)
+            
             # Get the current status again to ensure we're working with the latest
             current_status = get_processing_status(session_id)
+            
+            # Only reset if still in cancelled state (not if a new analysis has started)
             if current_status['status'] == 'cancelled':
                 current_status.update({
                     'status': 'idle',
@@ -2095,20 +2189,20 @@ def download_insights():
                          download_name="key_insights.txt")
     return "No insights file available", 404
 
-@app.route('/check-trial-key')
+@app.route('/check-trial-key')  # Keeping this route name for backward compatibility
 def check_trial_key():
-    """Check if the Community Monthly Limited Key is valid (not over limit)"""
-    if not TRIAL_API_KEY:
+    """Check if the Preloaded API Key is valid"""
+    if not PRELOADED_API_KEY:
         return jsonify({
             'valid': False, 
             'error': 'missing_key', 
-            'message': 'No Community Monthly Limited Key configured',
+            'message': 'No Preloaded API Key configured',
             'show_button': False  # Indicate that the button should be hidden
         }), 200
     
     try:
-        # Create OpenAI client with community key
-        client = OpenAI(api_key=TRIAL_API_KEY)
+        # Create OpenAI client with preloaded key
+        client = OpenAI(api_key=PRELOADED_API_KEY)
         
         # Make a minimal API call to test if the key is working and not hitting limits
         response = client.chat.completions.create(
@@ -2133,14 +2227,14 @@ def check_trial_key():
         if "rate limit" in error_message or "quota" in error_message or "billing" in error_message:
             return jsonify({
                 'valid': False, 
-                'message': 'Monthly quota exceeded for Community Limited Key. Please use your own API key.',
+                'message': 'API quota exceeded for Preloaded API Key. Please use your own API key.',
                 'show_button': True  # Still show the button but with error
             }), 200
         else:
-            logger.error(f"Error checking Community Monthly Limited Key: {e}")
+            logger.error(f"Error checking Preloaded API Key: {e}")
             return jsonify({
                 'valid': False, 
-                'message': f'Error validating Community Monthly Limited Key: {str(e)}',
+                'message': f'Error validating Preloaded API Key: {str(e)}',
                 'show_button': True  # Still show the button but with error
             }), 200
 
@@ -2168,10 +2262,11 @@ def upload():
             }), 400
         
         # Reset status for this session
+        # Set status to "starting" first to ensure other cancellation checks can detect it
         processing_status.update({
-            'status': 'idle',
+            'status': 'starting',
             'progress': 0,
-            'message': '',
+            'message': 'Starting job...',
             'error': None,
             'result_file': None,
             'summaries': [],
@@ -2184,12 +2279,12 @@ def upload():
         # Get API key
         api_key = request.form.get('api_key')
         if using_trial_key:
-            # Use the trial key instead of the one provided
-            if not TRIAL_API_KEY:
-                logger.warning("Rejected upload: Trial key requested but no trial key available")
-                return jsonify({'error': 'Trial API key is not available'}), 400
-            api_key = TRIAL_API_KEY
-            logger.info("Using trial API key")
+            # Use the preloaded key instead of the one provided
+            if not PRELOADED_API_KEY:
+                logger.warning("Rejected upload: Preloaded API key requested but no key available")
+                return jsonify({'error': 'Preloaded API key is not available'}), 400
+            api_key = PRELOADED_API_KEY
+            logger.info("Using preloaded API key")
         elif not api_key:
             logger.warning("Rejected upload: No API key provided")
             return jsonify({'error': 'API key is required'}), 400
@@ -2295,6 +2390,27 @@ def upload():
             'message': 'Job started',
             'job_id': job_id
         })
+    
+    except werkzeug.exceptions.ClientDisconnected:
+        # This is normal during cancellation, handle it gracefully
+        logger.info("Client disconnected during upload - likely a cancellation")
+        
+        # If we have a session_id, mark it as cancelled
+        try:
+            if 'session_id' in request.form:
+                session_id = request.form.get('session_id')
+                processing_status = get_processing_status(session_id)
+                processing_status['status'] = 'cancelled'
+                processing_status['message'] = 'Upload cancelled by user'
+                processing_status['last_activity'] = time.time()
+                logger.info(f"Marked session {session_id} as cancelled due to client disconnect")
+        except Exception as inner_e:
+            # Don't let errors in cancellation handling cause problems
+            logger.info(f"Error setting cancelled status: {str(inner_e)}")
+            
+        # Return a 200 response that won't be seen by the client
+        # but prevents a 500 error in the logs
+        return jsonify({'status': 'cancelled', 'message': 'Upload cancelled by client disconnection'}), 200
         
     except Exception as e:
         error_msg = f"Error during upload: {str(e)}"

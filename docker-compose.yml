@@ -19,8 +19,13 @@ services:
     environment:
       - PORT=5050
       - DOCKER_CONTAINER=true
+      # These environment variables can be set when running the container
+      # DO NOT add actual API keys to this file as it will be committed to git
       - PRELOADED_API_KEY=${PRELOADED_API_KEY}
       - ALLOWED_MODELS_WITH_PRELOADED_KEY=${ALLOWED_MODELS_WITH_PRELOADED_KEY}
+      - COMMUNITY_BUTTON_TEXT=${COMMUNITY_BUTTON_TEXT}
+      - COMMUNITY_MESSAGE_TITLE=${COMMUNITY_MESSAGE_TITLE}
+      - COMMUNITY_MESSAGE_DETAILS=${COMMUNITY_MESSAGE_DETAILS}
     restart: unless-stopped
     user: "1000:1000"  # Restored user constraint for correct permissions
 

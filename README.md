@@ -38,6 +38,12 @@ A Docker & AI powered email analysis tool that transforms PST archives into acti
        volumes:
          - pst_uploads:/app/uploads
          - pst_results:/app/results
+       # Optional environment variables for API key functionality
+       environment:
+         # Add your own OpenAI API key here to provide a preloaded key option
+         - PRELOADED_API_KEY=your_openai_api_key_here
+         # Restrict the preloaded key to specific models (optional)
+         - ALLOWED_MODELS_WITH_PRELOADED_KEY=gpt-4o,gpt-4o-mini
        restart: unless-stopped
    
    volumes:
@@ -50,7 +56,7 @@ A Docker & AI powered email analysis tool that transforms PST archives into acti
    docker-compose up -d
    ```
    
-   > **Note**: The pre-built image includes a Community Monthly Limited Key with a shared quota that can be used for testing. This key is restricted to the GPT-4o-mini model for cost efficiency, and all OpenAI data sharing controls are disabled for privacy. This community key is provided as a convenience and may be discontinued at any time.
+   > **Note**: You can optionally configure a preloaded API key by setting the PRELOADED_API_KEY environment variable. This adds a convenience button to the interface allowing users to use this key instead of entering their own. You can customize the button text and notification message with COMMUNITY_BUTTON_TEXT, COMMUNITY_MESSAGE_TITLE, and COMMUNITY_MESSAGE_DETAILS environment variables. This feature is ideal for team deployments or when you want to provide a preconfigured API key for convenience. By default, the preloaded key can use both GPT-4o and GPT-4o-mini models.
 
 2. **Alternative: Build from Source:**
    ```bash
@@ -78,6 +84,16 @@ services:
     volumes:
       - pst_uploads:/app/uploads
       - pst_results:/app/results
+    environment:
+      # Optional: Pre-loaded API key for convenience (add your own OpenAI API key)
+      - PRELOADED_API_KEY=your_openai_api_key_here
+      # Optional: Restrict preloaded key to specific models (comma-separated list)
+      - ALLOWED_MODELS_WITH_PRELOADED_KEY=gpt-4o,gpt-4o-mini
+      # Optional: Customize the preloaded key button text
+      - COMMUNITY_BUTTON_TEXT=Use Preloaded Key
+      # Optional: Customize the notification message (displayed when using preloaded key)
+      - COMMUNITY_MESSAGE_TITLE=Using Preloaded API Key
+      - COMMUNITY_MESSAGE_DETAILS=Using organization's preloaded API key
     restart: unless-stopped
 
 volumes:
@@ -103,8 +119,9 @@ This will store all uploads and results in the `./data` directory on your host s
    - Open http://localhost:5050 in your browser
    
 2. **API Key Options**:
-   - **Prebuilt Image**: Already includes a Community Monthly Limited Key for testing
-   - **Custom API Key**: You can provide your own OpenAI API key with access to GPT-4o or GPT-4o-mini models
+   - **Preloaded API Key**: Optionally configure your own OpenAI API key as a preloaded key
+   - **Custom API Key**: Users can provide their own OpenAI API key with access to GPT-4o or GPT-4o-mini models
+   - **Customizable Button**: You can change the preloaded key button text and notification message
    - API keys are never stored on the server, only used for API calls
    - Typical analysis costs vary depending on model and file size
 

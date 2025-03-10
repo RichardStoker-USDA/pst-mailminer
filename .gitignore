@@ -20,6 +20,13 @@ results/*
 .secret*
 .apikey*
 *.env
+*.env.example
+docker-compose.override.yml
+Dockerfile.local
+.env.example
+env.example
+*apikey*
+*secret*
 
 # IDE files
 .vscode/

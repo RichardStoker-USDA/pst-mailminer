@@ -2,17 +2,24 @@
  * Handles file upload via AJAX with progress tracking
  */
 document.addEventListener('DOMContentLoaded', function() {
-    // Check if organization key is available and show/hide button accordingly
+    // Check if preloaded API key is available and show/hide button accordingly
     fetch('/check-trial-key')
         .then(response => response.json())
         .then(data => {
             if (!data.show_button) {
-                // Hide the organization key button if no key is configured
+                // Hide the preloaded key button if no key is configured
                 document.getElementById('useTrialApiKeyBtn').style.display = 'none';
+            }
+            
+            // Store the original button text for later use
+            const useTrialApiKeyBtn = document.getElementById('useTrialApiKeyBtn');
+            if (useTrialApiKeyBtn) {
+                const buttonText = useTrialApiKeyBtn.textContent.trim();
+                useTrialApiKeyBtn.setAttribute('data-original-text', buttonText);
             }
         })
         .catch(err => {
-            console.error('Error checking organization key:', err);
+            console.error('Error checking preloaded API key:', err);
         });
     // Initialize tooltips
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
@@ -44,7 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const trialKeyMessage = document.getElementById('trialKeyMessage');
     const apiKeyFeedback = document.getElementById('apiKeyFeedback');
     
-    // Community Monthly Limited Key - this is a placeholder that will be replaced with a real API key 
+    // Preloaded API Key - this is a placeholder that will be replaced with a real API key 
     // in the backend for security
     const TRIAL_KEY_PLACEHOLDER = '<<PRELOADED_KEY>>';
     let usingTrialKey = false;
@@ -409,7 +416,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Function to check if trial key is valid (not over monthly limit)
+    // Function to check if preloaded API key is valid
     function checkTrialKeyValidity() {
         // Show a loading state
         useTrialApiKeyBtn.disabled = true;
@@ -422,28 +429,28 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             useTrialApiKeyBtn.disabled = false;
-            useTrialApiKeyBtn.innerHTML = '<i class="bi bi-people"></i> Use Community Key';
+            useTrialApiKeyBtn.innerHTML = '<i class="bi bi-people"></i> Use Preloaded API Key';
             
             if (data.valid) {
-                // Trial key is valid, enable trial mode
+                // Preloaded key is valid, enable preloaded mode
                 enableTrialMode();
             } else if (data.error === 'missing_key') {
-                // Trial key is not configured
+                // Preloaded key is not configured
                 showTrialKeyMissing();
             } else {
-                // Community key is over monthly limit, show error
-                showTrialKeyError(data.message || 'Monthly quota exceeded for Community Limited Key. Please try again later or use your own API key.');
+                // Preloaded key has an issue, show error
+                showTrialKeyError(data.message || 'API quota exceeded for Preloaded API Key. Please use your own API key.');
             }
         })
         .catch(error => {
-            console.error('Error checking community key:', error);
+            console.error('Error checking preloaded API key:', error);
             useTrialApiKeyBtn.disabled = false;
-            useTrialApiKeyBtn.innerHTML = '<i class="bi bi-people"></i> Use Community Key';
-            showTrialKeyError('Error checking Community Monthly Limited Key availability. Please try again later or use your own API key.');
+            useTrialApiKeyBtn.innerHTML = '<i class="bi bi-people"></i> Use Preloaded API Key';
+            showTrialKeyError('Error checking Preloaded API Key availability. Please try again later or use your own API key.');
         });
     }
     
-    // Function to enable trial mode
+    // Function to enable preloaded API key mode
     function enableTrialMode() {
         usingTrialKey = true;
         
@@ -451,10 +458,16 @@ document.addEventListener('DOMContentLoaded', function() {
         apiKeyInput.value = TRIAL_KEY_PLACEHOLDER;
         apiKeyInput.disabled = true;
         
-        // Add active class to the community key button and update text
+        // Add active class to the preloaded key button and update text
         useTrialApiKeyBtn.classList.remove('btn-outline-primary');
         useTrialApiKeyBtn.classList.add('btn-primary');
-        useTrialApiKeyBtn.innerHTML = '<i class="bi bi-people-fill"></i> Using Community Key';
+        // Store the original button text if not already stored
+        if (!useTrialApiKeyBtn.hasAttribute('data-original-text')) {
+            const buttonText = useTrialApiKeyBtn.textContent.trim().replace(/^[\s\uFEFF\xA0i class="bi bi-people"><\/i>\s*]+/g, '');
+            useTrialApiKeyBtn.setAttribute('data-original-text', buttonText);
+        }
+        useTrialApiKeyBtn.innerHTML = '<i class="bi bi-people-fill"></i> Using ' + 
+            useTrialApiKeyBtn.getAttribute('data-original-text');
         
         // Show the key notice
         trialKeyNotice.classList.remove('d-none');
@@ -517,7 +530,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Function to disable trial mode
+    // Function to disable preloaded API key mode
     function disableTrialMode() {
         usingTrialKey = false;
         
@@ -529,10 +542,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Enable the API key input
         apiKeyInput.disabled = false;
         
-        // Reset the community key button
+        // Reset the preloaded key button
         useTrialApiKeyBtn.classList.add('btn-outline-primary');
         useTrialApiKeyBtn.classList.remove('btn-primary');
-        useTrialApiKeyBtn.innerHTML = '<i class="bi bi-people"></i> Use Community Key';
+        // Get the original button text from the button's text content
+        const originalButtonText = useTrialApiKeyBtn.getAttribute('data-original-text') || 
+                                  useTrialApiKeyBtn.textContent.trim().replace(/^[\s\uFEFF\xA0i class="bi bi-people"><\/i>\s*]+/g, '');
+        useTrialApiKeyBtn.innerHTML = '<i class="bi bi-people"></i> ' + originalButtonText;
         
         // Hide the key notice
         trialKeyNotice.classList.add('d-none');
@@ -565,7 +581,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Function to show community key error
+    // Function to show preloaded API key error
     function showTrialKeyError(message) {
         trialKeyNotice.classList.remove('d-none');
         trialKeyNotice.classList.remove('alert-success');
@@ -573,9 +589,9 @@ document.addEventListener('DOMContentLoaded', function() {
         trialKeyMessage.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i>${message}`;
     }
     
-    // Function to show community key missing message
+    // Function to show preloaded API key missing message
     function showTrialKeyMissing() {
-        // If the community key is missing, just hide the button completely
+        // If the preloaded API key is missing, just hide the button completely
         useTrialApiKeyBtn.style.display = 'none';
     }
     
@@ -657,46 +673,136 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     function uploadFile(formData) {
-        fetch('/upload', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(data => {
+        // Reset cancellation state
+        isCancelled = false;
+        
+        // Cancel any existing upload
+        if (currentUploadXHR) {
+            currentUploadXHR.abort();
+            currentUploadXHR = null;
+        }
+        
+        // Create an upload progress bar
+        statusMessage.textContent = 'Uploading PST file...';
+        if (funMessage) {
+            funMessage.textContent = 'Uploading your emails, please wait...';
+        }
+        
+        // Use XMLHttpRequest for upload progress monitoring
+        const xhr = new XMLHttpRequest();
+        // Store reference for cancellation
+        currentUploadXHR = xhr;
+        
+        // Track upload progress
+        xhr.upload.addEventListener("progress", function(event) {
+            // Check if cancelled
+            if (isCancelled) return;
+            
+            if (event.lengthComputable) {
+                const percentComplete = Math.round((event.loaded / event.total) * 20); // Max 20% for upload phase
+                progressBar.style.width = percentComplete + '%';
+                progressBar.setAttribute('aria-valuenow', percentComplete);
+                
+                // Update percentage display
+                const progressPercentage = document.getElementById('progressPercentage');
+                if (progressPercentage) {
+                    progressPercentage.textContent = percentComplete + '%';
+                }
+                
+                // Update status message with upload size information
+                const uploadedMB = (event.loaded / (1024 * 1024)).toFixed(2);
+                const totalMB = (event.total / (1024 * 1024)).toFixed(2);
+                statusMessage.textContent = `Uploading PST file: ${uploadedMB}MB / ${totalMB}MB`;
+            }
+        });
+        
+        // Handle completion
+        xhr.addEventListener("load", function() {
+            // Clear the upload XHR reference
+            currentUploadXHR = null;
+            
+            // Check if cancelled
+            if (isCancelled) {
+                // No need to process response if cancelled
+                uploadCard.style.display = 'block';
+                statusCard.style.display = 'none';
+                return;
+            }
+            
+            if (xhr.status >= 200 && xhr.status < 300) {
+                // Success
+                const data = JSON.parse(xhr.responseText);
+                
+                // Update status message to show we're moving to the next step
+                statusMessage.textContent = 'PST file uploaded! API key validated! Starting analysis...';
+                if (funMessage) {
+                    funMessage.textContent = 'Upload complete! Now unpacking your emails...';
+                }
+                
+                // Start polling for status
+                pollStatus();
+            } else {
+                // Error handling
+                try {
+                    const data = JSON.parse(xhr.responseText);
+                    
                     // Show more user-friendly message for job in progress
                     if (data.error && data.error.includes('A job is already in progress')) {
                         // Create a special error modal for this case
                         showJobInProgressMessage();
-                        throw new Error('HANDLED');
+                        return; // Don't show other errors
                     }
                     
                     // For API key errors, show a better message
                     if (data.error && data.error.includes('Invalid API key')) {
-                        throw new Error('Your API key is invalid. Please check your OpenAI API key and try again.');
+                        showError('Your API key is invalid. Please check your OpenAI API key and try again.');
+                    } else {
+                        showError(data.error || 'Server error occurred');
                     }
-                    
-                    throw new Error(data.error || 'Server error occurred');
-                });
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Update status message to show we're moving to the next step
-            statusMessage.textContent = 'API key validated! Starting analysis...';
-            if (funMessage) {
-                funMessage.textContent = 'API key is good! Now unpacking your emails...';
-            }
-            
-            // Start polling for status
-            pollStatus();
-        })
-        .catch(error => {
-            if (error.message !== 'HANDLED') {
-                showError(error.message || 'An error occurred while uploading the file.');
-                console.error('Error:', error);
+                } catch (e) {
+                    showError('An error occurred while uploading the file.');
+                    console.error('Error parsing response:', e);
+                }
             }
         });
+        
+        // Handle network errors
+        xhr.addEventListener("error", function() {
+            // Clear the upload XHR reference
+            currentUploadXHR = null;
+            
+            // If explicitly cancelled, don't show error
+            if (isCancelled) return;
+            
+            showError('A network error occurred during upload. Please check your connection and try again.');
+            console.error('Network error during upload');
+        });
+        
+        // Handle timeout
+        xhr.addEventListener("timeout", function() {
+            // Clear the upload XHR reference
+            currentUploadXHR = null;
+            
+            // If explicitly cancelled, don't show error
+            if (isCancelled) return;
+            
+            showError('The upload timed out. Please try again or use a smaller file.');
+            console.error('Upload timeout');
+        });
+        
+        // Handle abort
+        xhr.addEventListener("abort", function() {
+            // Clear the upload XHR reference
+            currentUploadXHR = null;
+            console.log('Upload aborted by user');
+        });
+        
+        // Set a longer timeout (15 minutes) for very large files
+        xhr.timeout = 900000; // 15 minutes in milliseconds
+        
+        // Open and send the request
+        xhr.open("POST", "/upload");
+        xhr.send(formData);
     }
     
     let jobPollInterval = null;
@@ -810,6 +916,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const processedSummaries = new Set();
     // Keep track of first poll for elapsed time
     let startTime = null;
+    // Global variables for cancellation handling
+    let currentUploadXHR = null;
+    let isCancelled = false;
     
     function pollStatus() {
         // Get session ID
@@ -845,17 +954,34 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Create a fun status message based on the progress
             let friendlyMessage;
+            // Determine which phase of processing we're in to show appropriate visuals
+            let processingPhase = "unknown";
+            
             if (data.message.includes("Extracting PST")) {
+                processingPhase = "extraction";
                 friendlyMessage = "Unpacking your emails" + elapsedText;
             } else if (data.message.includes("Processed")) {
+                processingPhase = "processing";
                 // Extract just the number from "Processed X emails..."
                 const match = data.message.match(/Processed (\d+)/);
                 const count = match ? match[1] : "";
-                friendlyMessage = `Discovering email treasures${count ? ` (${count} found)` : ""}${elapsedText}`;
+                friendlyMessage = `Discovering email treasures${elapsedText}`;
             } else if (data.message.includes("chunks")) {
+                processingPhase = "analysis";
                 friendlyMessage = `Email investigation in progress${elapsedText}`;
+            } else if (data.message.includes("Creating final synthesis")) {
+                processingPhase = "synthesis";
+                friendlyMessage = `Finalizing your insights${elapsedText}`;
             } else {
                 friendlyMessage = data.message + elapsedText;
+            }
+            
+            // Update the visual indicators based on the processing phase - add error handling
+            try {
+                updateProcessingVisuals(processingPhase, data.progress);
+            } catch (err) {
+                console.error('Error updating processing visuals:', err);
+                // Continue with processing even if visual updates fail
             }
             
             statusMessage.textContent = friendlyMessage;
@@ -963,6 +1089,214 @@ document.addEventListener('DOMContentLoaded', function() {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
     
+    // Function to update visual indicators based on processing phase
+    function updateProcessingVisuals(phase, progress) {
+        // Get UI elements
+        const progressBar = document.getElementById('progressBar');
+        const processingIndicator = document.querySelector('.processing-status .ai-processing-indicator');
+        const phaseIndicator = document.getElementById('processingPhaseIndicator');
+        const extractionSpinner = document.getElementById('extractionSpinner');
+        const analysisIndicator = document.getElementById('analysisIndicator');
+        
+        // Create phase indicators if they don't exist yet
+        if (!phaseIndicator) {
+            const container = document.querySelector('.processing-status');
+            if (container) {
+                // Create phase indicator
+                const phaseDiv = document.createElement('div');
+                phaseDiv.id = 'processingPhaseIndicator';
+                phaseDiv.className = 'processing-phase ms-2';
+                phaseDiv.innerHTML = `
+                    <div id="extractionSpinner" class="spinner-grow spinner-grow-sm text-primary extraction-phase" role="status" style="display: none;">
+                        <span class="visually-hidden">Extracting...</span>
+                    </div>
+                    <div id="analysisIndicator" class="analysis-phase" style="display: none;">
+                        <div class="analysis-dots">
+                            <div class="analysis-dot"></div>
+                            <div class="analysis-dot"></div>
+                            <div class="analysis-dot"></div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(phaseDiv);
+                
+                // Get the newly created elements
+                extractionSpinner = document.getElementById('extractionSpinner');
+                analysisIndicator = document.getElementById('analysisIndicator');
+            }
+            
+            // Add CSS for the new indicators
+            const style = document.createElement('style');
+            style.textContent = `
+                .processing-phase {
+                    display: inline-flex;
+                    align-items: center;
+                }
+                
+                .extraction-phase {
+                    color: #007bff;
+                }
+                
+                .analysis-phase {
+                    display: inline-flex;
+                }
+                
+                .analysis-dots {
+                    display: flex;
+                    align-items: center;
+                }
+                
+                .analysis-dot {
+                    width: 6px;
+                    height: 6px;
+                    margin: 0 2px;
+                    background-color: #00c6ff;
+                    border-radius: 50%;
+                    opacity: 0.7;
+                }
+                
+                .analysis-dot:nth-child(1) {
+                    animation: pulse-dot 1.5s infinite;
+                    animation-delay: 0s;
+                }
+                
+                .analysis-dot:nth-child(2) {
+                    animation: pulse-dot 1.5s infinite;
+                    animation-delay: 0.3s;
+                }
+                
+                .analysis-dot:nth-child(3) {
+                    animation: pulse-dot 1.5s infinite;
+                    animation-delay: 0.6s;
+                }
+                
+                @keyframes pulse-dot {
+                    0% {
+                        transform: scale(1);
+                        opacity: 0.7;
+                    }
+                    50% {
+                        transform: scale(1.5);
+                        opacity: 1;
+                    }
+                    100% {
+                        transform: scale(1);
+                        opacity: 0.7;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Hide all indicators first
+        if (extractionSpinner) extractionSpinner.style.display = 'none';
+        if (analysisIndicator) analysisIndicator.style.display = 'none';
+        
+        // Get stage markers
+        const uploadStage = document.querySelector('.stage-marker[data-stage="upload"]');
+        const extractionStage = document.querySelector('.stage-marker[data-stage="extraction"]');
+        const analysisStage = document.querySelector('.stage-marker[data-stage="analysis"]');
+        const completeStage = document.querySelector('.stage-marker[data-stage="complete"]');
+        const stageProgress = document.querySelector('.stage-progress');
+        
+        // Check if we have stage markers before trying to reset them
+        const stageMarkers = document.querySelectorAll('.stage-marker');
+        if (stageMarkers.length > 0) {
+            // Reset all stages
+            stageMarkers.forEach(stage => {
+                stage.classList.remove('active', 'complete');
+            });
+        } else {
+            console.log('Stage markers not found - skipping stage updates');
+            return; // Exit early if no stage markers are found
+        }
+        
+        // Update stage progress based on phase
+        let stageProgressWidth = 0;
+        
+        // Show appropriate indicator based on phase
+        if (phase === "extraction") {
+            // Extraction phase - show spinning wheel
+            if (extractionSpinner) extractionSpinner.style.display = 'inline-block';
+            
+            // Set progress bar color for extraction phase
+            if (progressBar) {
+                progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-info';
+            }
+            
+            // Update stages
+            if (uploadStage) uploadStage.classList.add('complete');
+            if (extractionStage) extractionStage.classList.add('active');
+            stageProgressWidth = 33;
+        } 
+        else if (phase === "processing") {
+            // Processing phase - show spinning wheel (transitional)
+            if (extractionSpinner) extractionSpinner.style.display = 'inline-block';
+            
+            // Set progress bar color for processing phase
+            if (progressBar) {
+                progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-primary';
+            }
+            
+            // Update stages
+            if (uploadStage) uploadStage.classList.add('complete');
+            if (extractionStage) extractionStage.classList.add('complete');
+            if (analysisStage) analysisStage.classList.add('active');
+            stageProgressWidth = 66;
+        }
+        else if (phase === "analysis") {
+            // Analysis phase - show pulsing dots
+            if (analysisIndicator) analysisIndicator.style.display = 'inline-block';
+            
+            // Set progress bar color for analysis phase
+            if (progressBar) {
+                progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated';
+                // Add gradient background for analysis phase
+                progressBar.style.backgroundImage = 'linear-gradient(90deg, #3a1de0, #00d4ff)';
+            }
+            
+            // Update stages
+            if (uploadStage) uploadStage.classList.add('complete');
+            if (extractionStage) extractionStage.classList.add('complete');
+            if (analysisStage) analysisStage.classList.add('active');
+            stageProgressWidth = 66;
+        }
+        else if (phase === "synthesis") {
+            // Synthesis phase - show pulsing dots
+            if (analysisIndicator) analysisIndicator.style.display = 'inline-block';
+            
+            // Set progress bar color for synthesis phase
+            if (progressBar) {
+                progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated';
+                // Add gradient background for synthesis phase
+                progressBar.style.backgroundImage = 'linear-gradient(90deg, #3a1de0, #00d4ff)';
+            }
+            
+            // Update stages
+            if (uploadStage) uploadStage.classList.add('complete');
+            if (extractionStage) extractionStage.classList.add('complete');
+            if (analysisStage) analysisStage.classList.add('complete');
+            if (completeStage) completeStage.classList.add('active');
+            stageProgressWidth = 90;
+        }
+        
+        // If processing is 100% complete, mark all stages as complete
+        if (progress >= 99) {
+            if (uploadStage) uploadStage.classList.add('complete');
+            if (extractionStage) extractionStage.classList.add('complete');
+            if (analysisStage) analysisStage.classList.add('complete');
+            if (completeStage) completeStage.classList.add('complete');
+            stageProgressWidth = 100;
+        }
+        
+        // Update stage progress bar
+        if (stageProgress) {
+            stageProgress.style.width = stageProgressWidth + '%';
+        } else {
+            console.log('Stage progress element not found - may still be initializing');
+        }
+    }
+    
     // Download full analysis button
     downloadBtn.addEventListener('click', function() {
         window.location.href = '/download';
@@ -992,8 +1326,24 @@ document.addEventListener('DOMContentLoaded', function() {
     if (cancelAnalysisBtn) {
         cancelAnalysisBtn.addEventListener('click', function() {
             if (confirm('Are you sure you want to cancel the analysis? Any API credits used so far will not be refunded.')) {
-                // Stop the polling
+                // Set cancellation flag
+                isCancelled = true;
+                
+                // Stop the polling immediately to prevent further API calls
                 window.stopPolling = true;
+                
+                // Show cancellation in progress
+                statusMessage.textContent = 'Cancelling analysis...';
+                progressBar.classList.add('bg-warning');
+                cancelAnalysisBtn.disabled = true;
+                cancelAnalysisBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Cancelling...';
+                
+                // Abort any in-progress upload
+                if (currentUploadXHR) {
+                    console.log('Aborting in-progress upload');
+                    currentUploadXHR.abort();
+                    currentUploadXHR = null;
+                }
                 
                 // Get session ID
                 const sessionId = localStorage.getItem('pst_mailminer_session_id');
@@ -1002,6 +1352,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     formData.append('session_id', sessionId);
                 }
                 
+                // Add a fallback timer in case the server doesn't respond
+                const fallbackTimer = setTimeout(() => {
+                    console.log('Cancellation fallback triggered - server not responding');
+                    uploadCard.style.display = 'block';
+                    statusCard.style.display = 'none';
+                    
+                    // Re-enable the cancel button for next time
+                    cancelAnalysisBtn.disabled = false;
+                    cancelAnalysisBtn.innerHTML = '<i class="bi bi-x-circle me-1"></i>Cancel Analysis';
+                    progressBar.classList.remove('bg-warning');
+                }, 5000); // 5 second fallback
+                
                 // Call the cancel endpoint
                 fetch('/cancel-analysis', {
                     method: 'POST',
@@ -1009,25 +1371,91 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .then(response => response.json())
                 .then(data => {
+                    clearTimeout(fallbackTimer);
+                    
+                    // Log success message
+                    console.log('Analysis cancelled successfully:', data);
+                    
+                    // Create a record of the cancellation in localStorage to help track API usage
+                    try {
+                        const cancelRecord = {
+                            timestamp: new Date().toISOString(),
+                            sessionId: sessionId,
+                            status: data.status
+                        };
+                        
+                        // Store last 10 cancellations
+                        let cancelHistory = JSON.parse(localStorage.getItem('pst_cancellations') || '[]');
+                        cancelHistory.unshift(cancelRecord); // add to beginning
+                        if (cancelHistory.length > 10) cancelHistory.pop(); // remove oldest
+                        localStorage.setItem('pst_cancellations', JSON.stringify(cancelHistory));
+                    } catch (e) {
+                        console.error('Error recording cancellation:', e);
+                    }
+                    
                     // Go back to upload form
                     uploadCard.style.display = 'block';
                     statusCard.style.display = 'none';
                     
+                    // Re-enable the cancel button for next time
+                    cancelAnalysisBtn.disabled = false;
+                    cancelAnalysisBtn.innerHTML = '<i class="bi bi-x-circle me-1"></i>Cancel Analysis';
+                    progressBar.classList.remove('bg-warning');
                 })
                 .catch(error => {
+                    clearTimeout(fallbackTimer);
                     console.error('Error cancelling analysis:', error);
                     
                     // Go back to upload form anyway
                     uploadCard.style.display = 'block';
                     statusCard.style.display = 'none';
+                    
+                    // Re-enable the cancel button for next time
+                    cancelAnalysisBtn.disabled = false;
+                    cancelAnalysisBtn.innerHTML = '<i class="bi bi-x-circle me-1"></i>Cancel Analysis';
+                    progressBar.classList.remove('bg-warning');
                 });
+                
+                // Send a second cancellation request after a delay to ensure it gets through
+                // This helps in cases where the first request might not be processed fully
+                setTimeout(() => {
+                    if (sessionId) {
+                        const backupFormData = new FormData();
+                        backupFormData.append('session_id', sessionId);
+                        
+                        fetch('/cancel-analysis', {
+                            method: 'POST',
+                            body: backupFormData
+                        }).catch(err => console.log('Backup cancellation request error:', err));
+                    }
+                }, 2000); // 2 second delay for backup request
             }
         });
     }
     
-    // Add warning when user tries to leave the page during analysis
+    // Handle page navigation/refresh during analysis
     window.addEventListener('beforeunload', function(e) {
         if (statusCard.style.display === 'block' && progressBar.getAttribute('aria-valuenow') < 100) {
+            // Set cancellation flag
+            isCancelled = true;
+            
+            // Abort any in-progress upload
+            if (currentUploadXHR) {
+                currentUploadXHR.abort();
+                currentUploadXHR = null;
+            }
+            
+            // Get session ID
+            const sessionId = localStorage.getItem('pst_mailminer_session_id');
+            
+            // Send cancellation request synchronously to ensure it gets through before page unload
+            if (sessionId) {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/cancel-analysis', false); // false for synchronous
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhr.send('session_id=' + encodeURIComponent(sessionId));
+            }
+            
             // Standard message (user's browser will show its own message)
             const message = 'Analysis is in progress. If you leave, you will lose progress and any API credits used.';
             e.returnValue = message;
