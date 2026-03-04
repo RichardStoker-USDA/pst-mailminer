@@ -1,22 +1,18 @@
 name: Build and Push Docker Image
-
 on:
   push:
     branches: [ main ]
-
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-      
+
     steps:
       - name: Checkout code
-        run: |
-          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git .
-          git checkout ${{ github.sha }}
-          
+        uses: actions/checkout@v4
+
       - name: Set up Docker Buildx
         run: |
           echo '{"experimental": true}' | sudo tee /etc/docker/daemon.json
@@ -24,11 +20,11 @@ jobs:
           sudo apt-get update && sudo apt-get install -y qemu-user-static
           docker buildx create --name mybuilder --use
           docker buildx inspect --bootstrap
-          
+
       - name: Login to GitHub Container Registry
         run: |
-          echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
       - name: Build and push Docker image
         run: |
           IMAGE_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
